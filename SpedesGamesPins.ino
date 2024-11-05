@@ -1,7 +1,7 @@
 bool gameState = false;
 int score = 0;
 int randomPin = 0;
-volatile int guessPin = 0;
+volatile int playerPin = 0;
 const int pins[] = {2,3,4,5};
 
 
@@ -13,7 +13,7 @@ void setup() {
   }
 
   PCICR = B00000100;
-  PCMSK2 = B00011110;
+  PCMSK2 = B00111100; // Digital pins 2-5
   interrupts();
 }
 
@@ -34,23 +34,23 @@ void game() {
   Serial.println(randomPin);
   delay(2000);
 
-  if(guessPin != randomPin) {
+  if(playerPin != randomPin) {
       Serial.print("Score: ");
       Serial.println(score);
       score = 0;
       gameState = false;
     }
 
-  if(guessPin == randomPin) {
+  if(playerPin == randomPin) {
     score++;
   }
-  guessPin = 0;
+  playerPin = 0;
 }
 
 ISR(PCINT2_vect) {
   for(int i = 2; i < 6; i++) {
     if(digitalRead(i) == LOW) {
-      guessPin = i;
+      playerPin = i;
     }
   }
 }

@@ -9,7 +9,7 @@ volatile int pressCounter = 0;             // counter for button presses
 volatile bool newTimerInterrupt = false;   // for timer interrupt handler
 volatile int interruptCounter = 0;         // counter for interrupts
 int randomNumbers[100];                    // stores random integers
-volatile int buttonPush[100];              // stores button presses
+volatile int userNumbers[100];             // stores button presses
 volatile int score = 0;
 volatile bool running = false;
 
@@ -27,12 +27,12 @@ void loop()
   {
     if(buttonNumber == 4)
     {
-      startTheGame(); // start the game if buttonNumber == 4
+      startTheGame();  // start the game if buttonNumber == 4
     }
     else if(running && buttonNumber < 4)
     {
       pressCounter++;
-      checkGame(buttonNumber); // check the game if buttonNumber<4 and game is running
+      checkGame(buttonNumber);  // check the game if 0<=buttonNumber<4
     }
     buttonNumber = -1;  // reset buttonNumber after handling
   }
@@ -46,7 +46,7 @@ void loop()
 
 void initializeTimer(void)
 {
-  TCNT1 = 0;                              // reset timer value
+  TCNT1 = 0;
   OCR1A = 15624;                          // Generates 1hz timer cycle (16MHz/1024-1 = 15624)
   TCCR1B |= (1 << WGM12);                 // CTC-mode enabled
   TCCR1B |= (1 << CS12) | (1 << CS10);    // prescaler 1024
@@ -61,7 +61,7 @@ ISR(TIMER1_COMPA_vect)
     OCR1A -= 1562;   // Increase timer interrupt rate after 10 interrupts MODIFY IF TOO FAST/SLOW
     if(OCR1A < 1000)
     {
-      OCR1A = 1000; // lower limit for rate
+      OCR1A = 1000;  // lower limit for rate
     }
   }
   newTimerInterrupt = true;
@@ -69,8 +69,8 @@ ISR(TIMER1_COMPA_vect)
 
 void checkGame(byte nbrOfButtonPush)
 {
-  buttonPush[pressCounter] = nbrOfButtonPush;
-  if(randomNumbers[pressCounter] != buttonPush[pressCounter]) // stop game if button press is wrong and display score
+  userNumbers[pressCounter] = nbrOfButtonPush;
+  if(randomNumbers[pressCounter] != userNumbers[pressCounter]) // stop game if button press is wrong and display score
   {
     running = false;
   }

@@ -91,7 +91,7 @@ void initializeGame()
   interruptCounter = 0;
   running = true;
 
-	for(int i = 0; i < 100; i++)    // fill array with 100 random numbers from 0-3
+  for(int i = 0; i < 100; i++)    // fill array with 100 random numbers from 0-3
   {
     randomNumbers[i] = random(0, 4);
   }
@@ -101,3 +101,4 @@ void startTheGame()
 {
   initializeGame();
 }
+

@@ -1,1 +1,1 @@
-## This repository contains school assigments for Arduino
+This repository contains school assigments for Arduino

@@ -4,12 +4,12 @@
 #include "SpedenSpelit.h"
 
 
-volatile int buttonNumber = -1;           // for buttons interrupt handler
+volatile int buttonNumber = -1;            // for buttons interrupt handler
 volatile int pressCounter = 0;             // counter for button presses
-volatile bool newTimerInterrupt = false;  // for timer interrupt handler
-volatile int interruptCounter = 0;        // counter for interrupts
-volatile int randomNumbers[100];          // stores random integers
-volatile int buttonPush[100];             // stores button presses
+volatile bool newTimerInterrupt = false;   // for timer interrupt handler
+volatile int interruptCounter = 0;         // counter for interrupts
+int randomNumbers[100];                    // stores random integers
+volatile int buttonPush[100];              // stores button presses
 volatile int score = 0;
 volatile bool running = false;
 
@@ -25,38 +25,32 @@ void loop()
 {
   if(buttonNumber>=0)
   {
-    // start the game if buttonNumber == 4
-    if(buttonNumber == 4) 
+    if(buttonNumber == 4)
     {
-      startTheGame();
+      startTheGame(); // start the game if buttonNumber == 4
     }
-    // check the game if 0<=buttonNumber<4
-    if(running)
+    else if(running && buttonNumber < 4)
     {
-      if(buttonNumber >= 0 && buttonNumber < 4) 
-      {
-        pressCounter++;
-        checkGame(buttonNumber);
-      }
+      pressCounter++;
+      checkGame(buttonNumber); // check the game if buttonNumber<4 and game is running
     }
+    buttonNumber = -1;  // reset buttonNumber after handling
   }
-  if(running)
+
+  if(running && newTimerInterrupt)
   {
-    if(newTimerInterrupt == true)
-    {
-      setLed(randomNumbers[interruptCounter]);    // interrupt turns new led on
-      newTimerInterrupt = false;
-    }
+    setLed(randomNumbers[interruptCounter]);    // interrupt turns new led on
+    newTimerInterrupt = false;
   }
 }
 
 void initializeTimer(void)
 {
-  TCNT
+  TCNT1 = 0;                              // reset timer value
   OCR1A = 15624;                          // Generates 1hz timer cycle (16MHz/1024-1 = 15624)
-  TCCR1B |= (1 << WGM12);                 // OCR1A CTC-mode enabled
+  TCCR1B |= (1 << WGM12);                 // CTC-mode enabled
   TCCR1B |= (1 << CS12) | (1 << CS10);    // prescaler 1024
-  TIMSK1 |= (1 << OCIE1A);                // Clear Timer on Compare Match witch OCR1A
+  TIMSK1 |= (1 << OCIE1A);                // enable timer compare
 }
 
 ISR(TIMER1_COMPA_vect)
@@ -64,9 +58,12 @@ ISR(TIMER1_COMPA_vect)
   interruptCounter++;
   if(interruptCounter % 10 == 0) 
   {
-    OCR1A = OCR1A - 1562;   // Increase timer interrupt rate after 10 interrupts MODIFY IF TOO FAST/SLOW
+    OCR1A -= 1562;   // Increase timer interrupt rate after 10 interrupts MODIFY IF TOO FAST/SLOW
+    if(OCR1A < 1000)
+    {
+      OCR1A = 1000; // lower limit for rate
+    }
   }
-
   newTimerInterrupt = true;
 }
 
@@ -95,10 +92,12 @@ void initializeGame()
   {
     randomNumbers[i] = random(0, 4);
   }
+  initializeTimer(); // initialize here, so timer resets on round start
 }
 
 void startTheGame()
 {
   initializeGame();
+  showResult(score);
 }
 

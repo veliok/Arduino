@@ -1,36 +1,3 @@
-\documentclass[12pt, letterpaper]{article}
-\usepackage{listings}
-\usepackage{geometry}
-\usepackage[dvipsnames]{xcolor}
-\usepackage{multirow}
-\usepackage{amsmath}
-\usepackage{array}
-\usepackage[T1]{fontenc} 
-\usepackage{kpfonts}
-\usepackage[utf8]{inputenc}
-\usepackage{extsizes}
-\usepackage{subfig}
-\usepackage{hyperref}
-\hypersetup{
-    colorlinks=true,  
-    urlcolor=blue
-}
-\urlstyle{same}
-\geometry{
-    a4paper,
-    total={170mm,257mm},
-    left=20mm,
-    top=20mm,
-}
-\tolerance=1
-\emergencystretch=\maxdimen
-\hyphenpenalty=10000
-\hbadness=5000
-\title{README}
-\author{}
-\date{}
-\begin{document}
-\maketitle
-\begin{flushleft}
-    This repository is an collection of school assignments for Arduino
-\end{flushleft}
+# README
+
+## This repository contains school assigments for Arduino

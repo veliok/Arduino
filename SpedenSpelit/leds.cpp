@@ -15,6 +15,7 @@ void initializeLeds()
 
 void setLed(byte ledNumber)
 {
+  clearAllLeds();
   switch(ledNumber) 
   {
   case 0:

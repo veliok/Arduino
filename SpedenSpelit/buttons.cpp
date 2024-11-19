@@ -21,18 +21,8 @@ ISR(PCINT2_vect) {
   unsigned long interrupt = millis();
   if(interrupt - lastInterrupt > debounce)
   {
-    if(digitalRead(6) == LOW)
-    {
-      buttonNumber = 4;
-      return;
-    }
-    for(byte pin = firstPin; pin <= lastPin; pin++)
-    {
-      if(digitalRead(pin) == LOW) {
-        buttonNumber = pin - firstPin;
-        return;
-      }
-    }
+   
+  
     lastInterrupt = interrupt;
   }
 }

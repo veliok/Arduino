@@ -10,7 +10,7 @@ volatile int interruptCounter = -1;
 int randomNumbers[100];                    // stores random integers
 volatile int userNumbers[100];             // stores button presses
 volatile int gameScore = 0;
-int gameMode = 0;
+volatile int gameMode = 0;
 volatile bool isRunning = false;
 
 

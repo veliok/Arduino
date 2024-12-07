@@ -3,17 +3,22 @@
 #include "leds.h"
 #include "SpedenSpelit.h"
 
-const int TIMER_MIN = 3800;
+const int TIMER_MIN = 3800;                // lower limit for timer
 
-volatile int buttonNumber = -1;            // for buttons interrupt handler
+volatile int buttonNumber = -1;            // button pressed
 volatile int pressCounter = 0;
 volatile int interruptCounter = -1;
-int randomNumbers[100];                    // stores random integers
+int randomNumbers[100];
 volatile int userNumbers[100];             // stores button presses
 volatile int gameScore = 0;
 int gameMode = 0;
 volatile bool isRunning = false;
 volatile bool timerInterrupt = false;
+
+// Arrays and variables for MULTI mode
+bool ledState[4] = {false,false,false,false};
+bool buttonPressed[4] = {false,false,false,false};
+int requiredButtons = 0;
 
 
 void setup()
@@ -31,7 +36,7 @@ void loop()
     if(!isRunning) startTheGame();
     else if(isRunning)
     {
-      if(gameMode == 3) multiButtonCheck(buttonNumber);   // Handle mode 3 separately for multiple button presses at once
+      if(gameMode == MULTI) multiButtonCheck(buttonNumber);   // Handle multimode separately for multiple button presses at once
       else checkGame(buttonNumber);
     }
   }
@@ -68,44 +73,41 @@ void checkGame(byte nbrOfButtonPush)
     isRunning = false;
     stopTheGame();
   }
+  else gameScore++;
 
-  if(interruptCounter == 99) 
-  {
-    interruptCounter = 1;
-    pressCounter = 1;
-  }
-  gameScore++;
   showResult(gameScore);
   buttonNumber = -1;
 }
 
 void multiButtonCheck(byte nbrOfButtonPush)
 {
-  userNumbers[pressCounter] |= (1 << nbrOfButtonPush);
-
-  Serial.print("userNumbers[");
-  Serial.print(pressCounter);
-  Serial.print("]: ");
-  Serial.println(userNumbers[pressCounter], BIN);
-
-  Serial.print("randomNumbers[");
-  Serial.print(pressCounter);
-  Serial.print("]: ");
-  Serial.println(randomNumbers[pressCounter], BIN);
-
-  if(userNumbers[pressCounter] == randomNumbers[pressCounter])
-  {
-    pressCounter++;
-    gameScore++;
-    showResult(gameScore);
-    userNumbers[pressCounter] = 0;
-    buttonNumber = -1;
-  }
-  else if(userNumbers[pressCounter] > randomNumbers[pressCounter])
+  if(!ledState[nbrOfButtonPush]) // Check if wrong button is pressed
   {
     isRunning = false;
     stopTheGame();
   }
+
+  buttonPressed[nbrOfButtonPush] = true;
+
+  //  Check if all required buttons are pressed
+  bool allPressed = true;
+  for(int i = 0; i < 4; i++)
+  {
+    if(ledState[i] && !buttonPressed[i])
+    {
+      allPressed = false;
+      break;
+    }
+  }
+
+  if(allPressed)
+  {
+    gameScore++;
+    showResult(gameScore);
+    resetMultiButton();
+  }
+  
+  buttonNumber = -1;
 }
 
 void initializeGame()
@@ -117,25 +119,15 @@ void initializeGame()
   buttonNumber = -1;
   interruptCounter = 0;
 
-  for(int i = 0; i < 100; i++)    // fill array with 100 random numbers from 0-3
+  if(gameMode == MULTI)
   {
-    if(gameMode == 3)
-    {
-      int numberOfLeds = random(1, 4);
-
-      for(int j = 0; j < numberOfLeds; j++)
-      {
-        randomNumbers[i] |= (1 << random(0, 4));
-      }
-    }
-    else randomNumbers[i] = random(0, 4);
-    Serial.print("randomNumbers[");
-    Serial.print(i);
-    Serial.print("]: ");
-    Serial.println(randomNumbers[i], BIN);
+    resetMultiButton();
   }
-  
-  Serial.println("Game initialized");
+
+  for(int i = 0; i < 100; i++)
+  {
+    randomNumbers[i] = random(0, 4); // Single LED mode
+  }
 }
 
 void startTheGame()
@@ -149,47 +141,50 @@ void startTheGame()
 
 void stopTheGame()
 {
-  Serial.println("Game ended");
   show2();
   showResult(gameScore);
-  TIMSK1 &= ~(1 << OCIE1A); // Disable timer
+  TIMSK1 &= ~(1 << OCIE1A); // Disable timer at the end of round
 }
 
 void interruptHandler()
 {
   interruptCounter++;
+  if(interruptCounter == 99) 
+  {
+    interruptCounter = 1;
+    pressCounter = 1;
+  }
+
   int ledToWrite = randomNumbers[interruptCounter];
 
   switch(gameMode)
   {
-    case 0:
-    case 1:
-      gameMode01(ledToWrite);
+    case SINGLE:
+    case FASTER:
+      gameNormal(ledToWrite);
       break;
-    case 2:
-      gameMode2(ledToWrite);
+    case INVERSE:
+      gameInverse(ledToWrite);
       break;
-    case 3:
-      gameMode3(ledToWrite);
+    case MULTI:
+      gameMultiButton();
       break;
   }
 
-  if(interruptCounter % 10 == 0 && OCR1A > TIMER_MIN)
+  if(interruptCounter % 10 == 0 && OCR1A > TIMER_MIN) // Adjust speed
   {
-      if(gameMode == 1) OCR1A = OCR1A - 2248; // faster game
-      else OCR1A = OCR1A - 1248;              // normal game
+      if(gameMode == FASTER) OCR1A = OCR1A - 2248;    // faster game
+      else OCR1A = OCR1A - 1248;                      // normal game
   }
   timerInterrupt = false;
 }
 
-
-void gameMode01(int ledToWrite)
+void gameNormal(int ledToWrite)
 {
   setLed(ledToWrite);
-  Serial.println(ledToWrite);
 }
 
-void gameMode2(int ledToWrite)
+void gameInverse(int ledToWrite)
 {
   clearAllLeds();
   for(int i = 0; i < 4; i ++)
@@ -197,25 +192,29 @@ void gameMode2(int ledToWrite)
     if(i != ledToWrite)
     { 
       setLeds(i);
-      Serial.print("i: ");
-      Serial.println(i);
-      Serial.print("ledToWrite: ");
-      Serial.println(ledToWrite);
     }
   }
 }
-/*
-  gameMode 3 uses bitmasking to evaluate button presses and LEDs, 
-  this ensures that the order of button presses won't matter.
-*/
-void gameMode3(int ledToWrite)
+
+void gameMultiButton()
 {
   clearAllLeds();
+  resetMultiButton();
 
-  for(int i = 0; i < 4; i++)
+  requiredButtons = random(1, 5);
+  for(int i = 0; i < requiredButtons; i++)
   {
-    if(ledToWrite & (1 << i)) setLeds(i);
+    int ledToWrite = random(0, 4);
+    ledState[ledToWrite] = true;
+    setLeds(ledToWrite);
   }
-  Serial.print("ledToWrite: ");
-  Serial.println(ledToWrite, BIN);
+}
+
+void resetMultiButton()
+{
+  for(int i = 0; i < 4; i++)  // Reset state
+  {
+    ledState[i] = false;
+    buttonPressed[i] = false;
+  }
 }

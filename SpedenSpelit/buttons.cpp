@@ -1,28 +1,38 @@
 #include "buttons.h"
 
-extern volatile int buttonNumber;
-volatile unsigned long lastInterrupt = 0;
-const unsigned long debounce = 50;
+const unsigned long debounceDelay = 100;
+volatile unsigned long lastInterruptTime[NUM_BUTTONS] = {0};
+volatile bool buttonState[NUM_BUTTONS] = {0};
+extern volatile int buttonNumber;                        // Napin numero pelilogiikalle. T. Veli
 
 
 void initButtonsAndButtonInterrupts(void)
 {
-  for(byte pin = firstPin; pin <= lastPin; pin++)
-  {
-    pinMode(pin, INPUT_PULLUP);
+  for (byte pin = firstPin; pin <= lastPin; pin++) {
+    pinMode (pin, INPUT_PULLUP);
   }
-  pinMode(6, INPUT_PULLUP);
 
   PCICR |= (1 << PCIE2);
-  PCMSK2 |= (1 << PCINT18) | (1 << PCINT19) | (1 << PCINT20) | (1 << PCINT21) | (1 << PCINT22);
+  PCMSK2 |= 0b01111100;
 }
 
 ISR(PCINT2_vect) {
-  unsigned long interrupt = millis();
-  if(interrupt - lastInterrupt > debounce)
-  {
-   
-  
-    lastInterrupt = interrupt;
+  unsigned long currentTime = millis();
+  for (byte pin = firstPin; pin <= lastPin; pin++) {
+    byte index = pin - firstPin;
+      if (digitalRead(pin) == LOW) {
+        if (currentTime - lastInterruptTime[index] > debounceDelay) {
+          lastInterruptTime[index] = currentTime;
+            if (!buttonState[index]) {
+              buttonState[index] = true;
+              Serial.print("Nappia ");
+              Serial.print(index);
+              Serial.println(" painettu");
+              buttonNumber = index;         // Napin numero pelilogiikalle. T. Veli
+            }
+        }
+      } else {
+      buttonState[index] = false;
+      }
   }
 }
